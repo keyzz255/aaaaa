@@ -1,5 +1,1 @@
-Flask[async]
-python-telegram-bot==20.0
-gunicorn
-requests
-colorama
+qwe
