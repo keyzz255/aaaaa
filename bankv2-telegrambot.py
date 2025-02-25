@@ -2,20 +2,22 @@ import logging
 import requests
 import colorama
 import time
+from flask import Flask, request
 from colorama import Fore, Style
-from telegram import Update
+from telegram import Update, Bot
 from telegram.ext import Application, MessageHandler, CommandHandler, filters, CallbackContext
 
 # 🔹 Inisialisasi colorama untuk warna terminal
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "7862379874:AAFsKAsU5jIbWxQOj6ITvtyFL6_f16hp99Q"  # Ganti dengan Token Bot Anda
+TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # Ganti dengan Token Bot Anda
+WEBHOOK_URL = "https://your-app.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
 API_BANK_URL = "https://cek-nomor-rekening-bank-indonesia1.p.rapidapi.com/cekRekening"
 API_BANK_HEADERS = {
-    "x-rapidapi-key": "347c3d28d8msh5b5bbb8fcfdf9eap1b3295jsn7f44586c582f",
+    "x-rapidapi-key": "YOUR_RAPIDAPI_KEY",
     "x-rapidapi-host": "cek-nomor-rekening-bank-indonesia1.p.rapidapi.com"
 }
 
@@ -45,8 +47,14 @@ KODE_BANKS = {
     "sea": "535"
 }
 
-# 🔹 Logging (Untuk Debugging)
+# 🔹 Logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+# 🔹 Flask App untuk Webhook
+app = Flask(__name__)
+
+# 🔹 Inisialisasi Bot
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 # 🔹 Fungsi untuk mengecek rekening bank via API
 def cek_rekening(kode_bank, nomor_rekening):
@@ -57,17 +65,23 @@ def cek_rekening(kode_bank, nomor_rekening):
         if response.status_code == 200 and "data" in data and "nama" in data["data"]:
             return data["data"]["nama"]
         else:
-            return None  # Jika rekening tidak ditemukan
+            return None
     except requests.exceptions.RequestException as e:
         logging.error(f"❌ API Error: {e}")
-        return None  # Jika terjadi kesalahan
+        return None
 
-# 🔹 Fungsi saat pengguna mengetik /start
+# 🔹 Fungsi untuk menangani webhook dari Telegram
+@app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(), bot)
+    application.process_update(update)
+    return "OK", 200
+
+# 🔹 Fungsi untuk menangani perintah /start
 async def start(update: Update, context: CallbackContext):
     await update.message.reply_text(
         "✅ Selamat datang di *BANK CHECK BOT*!\n\n"
         "🔹 Ketik `<nama_bank> <nomor_rekening>` atau `<nomor_rekening> <nama_bank>` untuk validasi rekening.\n"
-        "🔹 Cek Bank MDR | BRI | BNI | BCA | SEABANK | CIMB | BSI.\n\n"
         "*Contoh:* `bca 8060127426` atau `8060127426 bca`",
         parse_mode="Markdown"
     )
@@ -75,16 +89,14 @@ async def start(update: Update, context: CallbackContext):
 # 🔹 Fungsi untuk menangani semua pesan masuk
 async def handle_message(update: Update, context: CallbackContext):
     try:
-        text = update.message.text.strip().lower()  # Ambil teks dari pengguna
-        words = text.split()  # Pecah pesan berdasarkan spasi
+        text = update.message.text.strip().lower()
+        words = text.split()
 
-        # Memastikan format pesan valid (harus ada 2 kata)
         if len(words) != 2:
             return
 
-        layanan_1, layanan_2 = words  # Ambil kedua kata input
+        layanan_1, layanan_2 = words
 
-        # **Cek Rekening Bank**
         if layanan_1 in KODE_BANKS and layanan_2.isdigit():
             kode_bank = KODE_BANKS[layanan_1]
             nomor = layanan_2
@@ -104,26 +116,15 @@ async def handle_message(update: Update, context: CallbackContext):
                     parse_mode="Markdown"
                 )
             else:
-                await update.message.reply_text("⚠️ Rekening tidak ditemukan | bantu cek manual ya. 🔹 Berfungsi untuk Cek Bank MANDIRI | BRI | BNI | BCA | SEA | CIMB | BSI.", parse_mode="Markdown")
-            return
-
+                await update.message.reply_text("⚠️ Rekening tidak ditemukan.", parse_mode="Markdown")
     except Exception as e:
         logging.error(f"❌ Terjadi kesalahan: {e}")
 
-# 🔹 Menjalankan bot Telegram dalam loop (agar otomatis restart jika crash)
-def main():
-    while True:
-        try:
-            app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-            app.add_handler(CommandHandler("start", start))
-            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-            
-            print(Fore.GREEN + "🚀 BOT TELEGRAM SEDANG BERJALAN...")
-            app.run_polling()
-        except Exception as e:
-            logging.error(f"❌ BOT TERHENTI: {e}")
-            time.sleep(10)  # Tunggu 10 detik sebelum restart
-
-# 🔹 Jalankan bot
+# 🔹 Menjalankan bot Telegram
 if __name__ == "__main__":
-    main()
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    print(Fore.GREEN + "🚀 BOT TELEGRAM SIAP MENERIMA WEBHOOK...")
+    app.run(host="0.0.0.0", port=5000)
