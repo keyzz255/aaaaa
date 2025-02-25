@@ -1,5 +1,5 @@
-flask
+Flask
+python-telegram-bot==20.0
+gunicorn
 requests
 colorama
-python-telegram-bot
-gunicorn
