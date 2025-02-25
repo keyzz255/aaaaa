@@ -1,23 +1,22 @@
 import logging
 import requests
 import colorama
-import time
 from flask import Flask, request
 from colorama import Fore, Style
 from telegram import Update, Bot
-from telegram.ext import Application, MessageHandler, CommandHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # 🔹 Inisialisasi colorama untuk warna terminal
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan Token Bot Anda
+TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # Ganti dengan token baru setelah reset
 WEBHOOK_URL = "https://aaaaa-bzdl.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
 API_BANK_URL = "https://cek-nomor-rekening-bank-indonesia1.p.rapidapi.com/cekRekening"
 API_BANK_HEADERS = {
-    "x-rapidapi-key": "347c3d28d8msh5b5bbb8fcfdf9eap1b3295jsn7f44586c582f",
+    "x-rapidapi-key": "YOUR_RAPIDAPI_KEY",
     "x-rapidapi-host": "cek-nomor-rekening-bank-indonesia1.p.rapidapi.com"
 }
 
@@ -56,25 +55,21 @@ app = Flask(__name__)
 # 🔹 Inisialisasi Bot
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-# 🔹 Fungsi untuk mengecek rekening bank via API
-def cek_rekening(kode_bank, nomor_rekening):
-    params = {"kodeBank": kode_bank, "noRekening": nomor_rekening}
-    try:
-        response = requests.get(API_BANK_URL, headers=API_BANK_HEADERS, params=params, timeout=10)
-        data = response.json()
-        if response.status_code == 200 and "data" in data and "nama" in data["data"]:
-            return data["data"]["nama"]
-        else:
-            return None
-    except requests.exceptions.RequestException as e:
-        logging.error(f"❌ API Error: {e}")
-        return None
+# 🔹 Inisialisasi Application (HARUS SEBELUM FUNGSI WEBHOOK)
+application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-# 🔹 Fungsi untuk menangani webhook dari Telegram
+# 🔹 Fungsi Webhook untuk menerima pesan dari Telegram
 @app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(), bot)
-    application.process_update(update)
+    logging.info("📩 Webhook received a request!")  # Debugging log
+
+    try:
+        update = Update.de_json(request.get_json(), bot)
+        logging.info(f"✅ Received update: {update}")
+        application.process_update(update)  # 🚀 Sekarang `application` sudah terdefinisi sebelum dipakai
+    except Exception as e:
+        logging.error(f"❌ Error processing update: {e}")  # Debugging jika error
+
     return "OK", 200
 
 # 🔹 Fungsi untuk menangani perintah /start
@@ -120,11 +115,11 @@ async def handle_message(update: Update, context: CallbackContext):
     except Exception as e:
         logging.error(f"❌ Terjadi kesalahan: {e}")
 
-# 🔹 Menjalankan bot Telegram
-if __name__ == "__main__":
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+# 🔹 Menambahkan handler ke application
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+# 🔹 Jalankan Flask untuk menerima Webhook
+if __name__ == "__main__":
     print(Fore.GREEN + "🚀 BOT TELEGRAM SIAP MENERIMA WEBHOOK...")
     app.run(host="0.0.0.0", port=5000)
