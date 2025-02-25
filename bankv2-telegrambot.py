@@ -11,13 +11,13 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan token bot Anda
+TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # Ganti dengan token bot Anda
 WEBHOOK_URL = "https://aaaaa-bzdl.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
 API_BANK_URL = "https://cek-nomor-rekening-bank-indonesia1.p.rapidapi.com/cekRekening"
 API_BANK_HEADERS = {
-    "x-rapidapi-key": "347c3d28d8msh5b5bbb8fcfdf9eap1b3295jsn7f44586c582f",
+    "x-rapidapi-key": "YOUR_RAPIDAPI_KEY",
     "x-rapidapi-host": "cek-nomor-rekening-bank-indonesia1.p.rapidapi.com"
 }
 
@@ -58,18 +58,19 @@ bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 # 🔹 Inisialisasi Application untuk Telegram Bot
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+asyncio.run(application.initialize())  # 🔥 Inisialisasi Application agar tidak error
 
 # 🔹 Fungsi Webhook untuk menerima pesan dari Telegram
 @app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
-async def webhook():
+def webhook():
     logging.info("📩 Webhook menerima permintaan!")
 
     try:
         update = Update.de_json(request.get_json(), bot)
         logging.info(f"✅ Update diterima: {update}")
 
-        # Gunakan await untuk coroutine agar tidak error
-        await application.process_update(update)
+        # Gunakan asyncio.run() untuk menjalankan fungsi async di dalam Flask yang sinkron
+        asyncio.run(application.process_update(update))
 
     except Exception as e:
         logging.error(f"❌ Error dalam webhook: {e}")
