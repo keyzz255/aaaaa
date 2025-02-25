@@ -1,6 +1,7 @@
 import logging
 import requests
 import colorama
+import asyncio
 from flask import Flask, request
 from colorama import Fore, Style
 from telegram import Update, Bot
@@ -10,7 +11,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan token bot baru Anda
+TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan token bot Anda
 WEBHOOK_URL = "https://aaaaa-bzdl.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
@@ -60,15 +61,15 @@ application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
 # 🔹 Fungsi Webhook untuk menerima pesan dari Telegram
 @app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
-def webhook():
+async def webhook():
     logging.info("📩 Webhook menerima permintaan!")
 
     try:
         update = Update.de_json(request.get_json(), bot)
         logging.info(f"✅ Update diterima: {update}")
 
-        # Memproses update ke dalam bot
-        application.process_update(update)
+        # Gunakan await untuk coroutine agar tidak error
+        await application.process_update(update)
 
     except Exception as e:
         logging.error(f"❌ Error dalam webhook: {e}")
