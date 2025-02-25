@@ -10,7 +10,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan token baru setelah reset
+TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan token bot baru Anda
 WEBHOOK_URL = "https://aaaaa-bzdl.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
@@ -46,48 +46,60 @@ KODE_BANKS = {
     "sea": "535"
 }
 
-# 🔹 Logging
+# 🔹 Logging untuk debugging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# 🔹 Flask App untuk Webhook
+# 🔹 Inisialisasi Flask
 app = Flask(__name__)
 
 # 🔹 Inisialisasi Bot
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-# 🔹 Inisialisasi Application (HARUS SEBELUM FUNGSI WEBHOOK)
+# 🔹 Inisialisasi Application untuk Telegram Bot
 application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
 # 🔹 Fungsi Webhook untuk menerima pesan dari Telegram
 @app.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
 def webhook():
-    logging.info("📩 Webhook received a request!")  # Debugging log
+    logging.info("📩 Webhook menerima permintaan!")
 
     try:
         update = Update.de_json(request.get_json(), bot)
-        logging.info(f"✅ Received update: {update}")
-        application.process_update(update)  # 🚀 Sekarang `application` sudah terdefinisi sebelum dipakai
+        logging.info(f"✅ Update diterima: {update}")
+
+        # Memproses update ke dalam bot
+        application.process_update(update)
+
     except Exception as e:
-        logging.error(f"❌ Error processing update: {e}")  # Debugging jika error
+        logging.error(f"❌ Error dalam webhook: {e}")
 
     return "OK", 200
 
 # 🔹 Fungsi untuk menangani perintah /start
 async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text(
-        "✅ Selamat datang di *BANK CHECK BOT*!\n\n"
-        "🔹 Ketik `<nama_bank> <nomor_rekening>` atau `<nomor_rekening> <nama_bank>` untuk validasi rekening.\n"
-        "*Contoh:* `bca 8060127426` atau `8060127426 bca`",
-        parse_mode="Markdown"
-    )
+    logging.info(f"📩 Fungsi /start dipanggil oleh {update.message.chat.username}")
+
+    try:
+        await update.message.reply_text(
+            "✅ Selamat datang di *BANK CHECK BOT*!\n\n"
+            "🔹 Ketik `<nama_bank> <nomor_rekening>` atau `<nomor_rekening> <nama_bank>` untuk validasi rekening.\n"
+            "*Contoh:* `bca 8060127426` atau `8060127426 bca`",
+            parse_mode="Markdown"
+        )
+        logging.info("✅ Pesan /start berhasil dikirim.")
+    except Exception as e:
+        logging.error(f"❌ Error mengirim pesan /start: {e}")
 
 # 🔹 Fungsi untuk menangani semua pesan masuk
 async def handle_message(update: Update, context: CallbackContext):
+    logging.info(f"📩 Pesan diterima dari {update.message.chat.username}: {update.message.text}")
+
     try:
         text = update.message.text.strip().lower()
         words = text.split()
 
         if len(words) != 2:
+            await update.message.reply_text("⚠️ Format salah. Gunakan `<nama_bank> <nomor_rekening>`.")
             return
 
         layanan_1, layanan_2 = words
@@ -110,10 +122,26 @@ async def handle_message(update: Update, context: CallbackContext):
                     f"👤 Nama Pemilik: *{nama_pemilik}*",
                     parse_mode="Markdown"
                 )
+                logging.info("✅ Cek rekening berhasil.")
             else:
                 await update.message.reply_text("⚠️ Rekening tidak ditemukan.", parse_mode="Markdown")
+                logging.info("⚠️ Rekening tidak ditemukan.")
     except Exception as e:
-        logging.error(f"❌ Terjadi kesalahan: {e}")
+        logging.error(f"❌ Error saat memproses pesan: {e}")
+
+# 🔹 Fungsi untuk mengecek rekening bank via API
+def cek_rekening(kode_bank, nomor_rekening):
+    params = {"kodeBank": kode_bank, "noRekening": nomor_rekening}
+    try:
+        response = requests.get(API_BANK_URL, headers=API_BANK_HEADERS, params=params, timeout=10)
+        data = response.json()
+        if response.status_code == 200 and "data" in data and "nama" in data["data"]:
+            return data["data"]["nama"]
+        else:
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"❌ API Error: {e}")
+        return None
 
 # 🔹 Menambahkan handler ke application
 application.add_handler(CommandHandler("start", start))
