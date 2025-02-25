@@ -11,13 +11,13 @@ from telegram.ext import Application, MessageHandler, CommandHandler, filters, C
 colorama.init(autoreset=True)
 
 # 🔹 Konfigurasi Bot Telegram
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # Ganti dengan Token Bot Anda
-WEBHOOK_URL = "https://your-app.onrender.com/"  # Ganti dengan URL Webhook dari Render
+TELEGRAM_BOT_TOKEN = "7152068354:AAFW23XAfk5Ghc38E3-KzysoaI7ReEcTzE8"  # Ganti dengan Token Bot Anda
+WEBHOOK_URL = "https://aaaaa-bzdl.onrender.com/"  # Ganti dengan URL Webhook dari Render
 
 # 🔹 API Bank (Validasi Rekening)
 API_BANK_URL = "https://cek-nomor-rekening-bank-indonesia1.p.rapidapi.com/cekRekening"
 API_BANK_HEADERS = {
-    "x-rapidapi-key": "YOUR_RAPIDAPI_KEY",
+    "x-rapidapi-key": "347c3d28d8msh5b5bbb8fcfdf9eap1b3295jsn7f44586c582f",
     "x-rapidapi-host": "cek-nomor-rekening-bank-indonesia1.p.rapidapi.com"
 }
 
